@@ -1,25 +1,32 @@
 server:
   port: 8884
   address: 0.0.0.0
-  servlet:
-    context-path: /test-service
 
 spring:
-    application:
-      name:
-eureka:
- client:
-     serviceUrl:
-       defaultZone:  http://eureka.didispace.com/eureka/
- instance:
-   prefer-ip-address: true
+  application:
+    name: springCloud-test
+#  cloud:
+#    nacos:
+#      discovery:
+#          server-addr: 127.0.0.1:8848
 
-test-service :
-   ribbon.NFLoadBalancerRuleClassName : com.netflix.loadbalancer.RandomRule
+
+springCloud-test:
+  ribbon.NFLoadBalancerRuleClassName: com.netflix.loadbalancer.RandomRule
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone:  http://localhost:8761/eureka/
+
+soul:
+  springcloud:
+    admin-url: http://localhost:9095
+    context-path: /springcloud
+
 
 logging:
-            level:
-                root: info
-                org.dromara.soul : debug
-            path: "./logs"
-
+  level:
+    root: info
+    org.dromara.soul: debug
+  path: "./logs"

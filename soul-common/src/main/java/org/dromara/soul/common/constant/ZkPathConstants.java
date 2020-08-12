@@ -26,23 +26,33 @@ package org.dromara.soul.common.constant;
 public final class ZkPathConstants implements Constants {
 
     /**
-     * The constant SELECTOR_PARENT.
-     */
-    public static final String SELECTOR_PARENT = "/soul/selector";
-
-    /**
      * The constant SELECTOR_JOIN_RULE.
      */
     public static final String SELECTOR_JOIN_RULE = "-";
 
-    public static final String PLUGIN_PARENT = "/soul/plugin";
+    private static final String PRE_FIX = "/soul";
 
-    private static final String RULE_PARENT = "/soul/rule";
+    /**
+     * The constant PLUGIN_PARENT.
+     */
+    public static final String PLUGIN_PARENT = PRE_FIX + "/plugin";
+
+    /**
+     * The constant SELECTOR_PARENT.
+     */
+    public static final String SELECTOR_PARENT = PRE_FIX + "/selector";
+    
+    public static final String RULE_PARENT = PRE_FIX + "/rule";
 
     /**
      * The constant APP_AUTH_PARENT.
      */
-    public static final String APP_AUTH_PARENT = "/soul/auth";
+    public static final String APP_AUTH_PARENT = PRE_FIX + "/auth";
+
+    /**
+     * The constant META_DATA.
+     */
+    public static final String META_DATA = PRE_FIX + "/metaData";
 
     /**
      * acquire app_auth_path.
@@ -53,6 +63,18 @@ public final class ZkPathConstants implements Constants {
     public static String buildAppAuthPath(final String appKey) {
         return String.join("/", APP_AUTH_PARENT, appKey);
     }
+
+
+    /**
+     * Build meta data path string.
+     *
+     * @param path the path
+     * @return the string
+     */
+    public static String buildMetaDataPath(final String path) {
+        return META_DATA + "/" + path;
+    }
+
 
     /**
      * buildPluginParentPath.

@@ -41,7 +41,7 @@ public class PluginDO extends BaseDO {
     private String name;
 
     /**
-     * plugin config @see 2.0
+     * plugin config @see 2.0.
      */
     private String config;
 
@@ -51,6 +51,7 @@ public class PluginDO extends BaseDO {
     private Boolean enabled;
 
     /**
+     * the role.
      * {@linkplain org.dromara.soul.common.enums.PluginRoleEnum}
      */
     private Integer role;
@@ -66,7 +67,7 @@ public class PluginDO extends BaseDO {
             PluginDO pluginDO = new PluginDO();
             Timestamp currentTime = new Timestamp(System.currentTimeMillis());
             if (StringUtils.isEmpty(pluginDTO.getId())) {
-                pluginDO.setId(UUIDUtils.generateShortUuid());
+                pluginDO.setId(UUIDUtils.getInstance().generateShortUuid());
                 pluginDO.setDateCreated(currentTime);
             } else {
                 pluginDO.setId(pluginDTO.getId());

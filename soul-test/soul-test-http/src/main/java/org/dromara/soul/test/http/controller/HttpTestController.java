@@ -18,9 +18,8 @@
 
 package org.dromara.soul.test.http.controller;
 
-
+import org.dromara.soul.client.springmvc.annotation.SoulSpringMvcClient;
 import org.dromara.soul.test.http.dto.UserDTO;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,8 +36,9 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/test")
+@SoulSpringMvcClient(path = "/test/**")
 public class HttpTestController {
-
+    
     /**
      * Post user dto.
      *
@@ -46,31 +46,24 @@ public class HttpTestController {
      * @return the user dto
      */
     @PostMapping("/payment")
-    public UserDTO post(final UserDTO userDTO) {
+    public UserDTO post(@RequestBody final UserDTO userDTO) {
         return userDTO;
     }
-
+    
     /**
      * Find by user id string.
      *
+     * @param userId the user id
      * @return the string
      */
     @GetMapping("/findByUserId")
-    public String findByUserId() {
-        return "helloWorld!";
+    public UserDTO findByUserId(@RequestParam("userId") final String userId) {
+        UserDTO userDTO = new UserDTO();
+        userDTO.setUserId(userId);
+        userDTO.setUserName("hello world");
+        return userDTO;
     }
-
-    /**
-     * Test get integer.
-     *
-     * @param id the id
-     * @return the integer
-     */
-    @GetMapping("/id")
-    public Integer testGet(@RequestParam("id") Integer id) {
-        return id;
-    }
-
+    
     /**
      * Gets path variable.
      *
@@ -79,10 +72,29 @@ public class HttpTestController {
      * @return the path variable
      */
     @GetMapping("/path/{id}")
-    public String getPathVariable(@PathVariable("id") String id, @RequestParam("name") String name) {
-        return id + "_" + name;
+    public UserDTO getPathVariable(@PathVariable("id") final String id, @RequestParam("name") final String name) {
+        UserDTO userDTO = new UserDTO();
+        userDTO.setUserId(id);
+        userDTO.setUserName("hello world");
+        return userDTO;
     }
-
+    
+    
+    /**
+     * Test rest ful string.
+     *
+     * @param id the id
+     * @return the string
+     */
+    @GetMapping("/path/{id}/name")
+    public UserDTO testRestFul(@PathVariable("id") final String id) {
+        UserDTO userDTO = new UserDTO();
+        userDTO.setUserId(id);
+        userDTO.setUserName("hello world");
+        return userDTO;
+    }
+    
+    
     /**
      * Put path variable and body string.
      *
@@ -91,31 +103,10 @@ public class HttpTestController {
      * @return the string
      */
     @PutMapping("/putPathBody/{id}")
-    public String putPathVariableAndBody(@PathVariable("id") String id, @RequestBody UserDTO userDTO) {
-        return id + "_" + userDTO.getUserName();
+    public UserDTO putPathVariableAndBody(@PathVariable("id") final String id, @RequestBody final UserDTO userDTO) {
+        userDTO.setUserId(id);
+        userDTO.setUserName("hello world");
+        return userDTO;
     }
-
-    /**
-     * Put path variable string.
-     *
-     * @param id the id
-     * @return the string
-     */
-    @PutMapping("/putPath/{id}")
-    public String putPathVariable(@PathVariable("id") String id) {
-        return id;
-    }
-
-    /**
-     * Delete path variable string.
-     *
-     * @param id the id
-     * @return the string
-     */
-    @DeleteMapping("/deletePath/{id}")
-    public String deletePathVariable(@PathVariable("id") String id) {
-        return id;
-    }
-
-
+    
 }

@@ -18,7 +18,6 @@
 
 package org.dromara.soul.common.utils;
 
-
 import org.dromara.soul.common.constant.Constants;
 import org.springframework.util.DigestUtils;
 
@@ -27,6 +26,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -57,7 +57,7 @@ public final class SignUtils {
      * @param params  params
      * @return sign
      */
-    private static String generateSign(final String signKey, final Map<String, String> params) {
+    public static String generateSign(final String signKey, final Map<String, String> params) {
         List<String> storedKeys = Arrays.stream(params.keySet()
                 .toArray(new String[]{}))
                 .sorted(Comparator.naturalOrder())
@@ -81,4 +81,14 @@ public final class SignUtils {
     public boolean isValid(final String sign, final Map<String, String> params, final String signKey) {
         return Objects.equals(sign, generateSign(signKey, params));
     }
+
+    /**
+     * Generate key string.
+     *
+     * @return the string
+     */
+    public String generateKey() {
+        return UUID.randomUUID().toString().replaceAll("-", "").toUpperCase();
+    }
+
 }

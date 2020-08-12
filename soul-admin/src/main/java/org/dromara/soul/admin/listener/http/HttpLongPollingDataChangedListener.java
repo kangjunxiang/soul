@@ -1,18 +1,20 @@
 /*
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements.  See the NOTICE file distributed with
- *   this work for additional information regarding copyright ownership.
- *   The ASF licenses this file to You under the Apache License, Version 2.0
- *   (the "License"); you may not use this file except in compliance with
- *   the License.  You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * Contributor license agreements.See the NOTICE file distributed with
+ * This work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * he License.You may obtain a copy of the License at
  *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 package org.dromara.soul.admin.listener.http;
@@ -22,16 +24,17 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.dromara.soul.admin.listener.AbstractDataChangedListener;
 import org.dromara.soul.admin.listener.ConfigDataCache;
-import org.dromara.soul.common.enums.DataEventTypeEnum;
+import org.dromara.soul.admin.result.SoulAdminResult;
 import org.dromara.soul.common.concurrent.SoulThreadFactory;
 import org.dromara.soul.common.constant.HttpConstants;
 import org.dromara.soul.common.dto.AppAuthData;
+import org.dromara.soul.common.dto.MetaData;
 import org.dromara.soul.common.dto.PluginData;
 import org.dromara.soul.common.dto.RuleData;
 import org.dromara.soul.common.dto.SelectorData;
 import org.dromara.soul.common.enums.ConfigGroupEnum;
+import org.dromara.soul.common.enums.DataEventTypeEnum;
 import org.dromara.soul.common.exception.SoulException;
-import org.dromara.soul.common.result.SoulResult;
 import org.dromara.soul.common.utils.GsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +43,7 @@ import org.springframework.http.MediaType;
 import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -60,6 +64,7 @@ import java.util.concurrent.TimeUnit;
  * @author huangxiaofeng
  * @since 2.0.0
  */
+@SuppressWarnings("all")
 public class HttpLongPollingDataChangedListener extends AbstractDataChangedListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpLongPollingDataChangedListener.class);
@@ -77,6 +82,7 @@ public class HttpLongPollingDataChangedListener extends AbstractDataChangedListe
 
     private final ScheduledExecutorService scheduler;
 
+
     /**
      * Instantiates a new Http long polling data changed listener.
      */
@@ -91,6 +97,7 @@ public class HttpLongPollingDataChangedListener extends AbstractDataChangedListe
             this.updatePluginCache();
             this.updateRuleCache();
             this.updateSelectorCache();
+            this.updateMetaDataCache();
         }, 300, 300, TimeUnit.SECONDS);
 
     }
@@ -128,6 +135,11 @@ public class HttpLongPollingDataChangedListener extends AbstractDataChangedListe
     @Override
     protected void afterAppAuthChanged(final List<AppAuthData> changed, final DataEventTypeEnum eventType) {
         scheduler.execute(new DataChangeTask(ConfigGroupEnum.APP_AUTH));
+    }
+
+    @Override
+    protected void afterMetaDataChanged(final List<MetaData> changed, final DataEventTypeEnum eventType) {
+        scheduler.execute(new DataChangeTask(ConfigGroupEnum.META_DATA));
     }
 
     @Override
@@ -176,8 +188,8 @@ public class HttpLongPollingDataChangedListener extends AbstractDataChangedListe
             response.setHeader("Cache-Control", "no-cache,no-store");
             response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
             response.setStatus(HttpServletResponse.SC_OK);
-            response.getWriter().println(GsonUtils.getInstance().toJson(SoulResult.success("success", changedGroups)));
-        } catch (Exception ex) {
+            response.getWriter().println(GsonUtils.getInstance().toJson(SoulAdminResult.success("success", changedGroups)));
+        } catch (IOException ex) {
             LOGGER.error("Sending response failed.", ex);
         }
     }
@@ -225,15 +237,11 @@ public class HttpLongPollingDataChangedListener extends AbstractDataChangedListe
 
         @Override
         public void run() {
-            try {
-                for (Iterator<LongPollingClient> iter = clients.iterator(); iter.hasNext(); ) {
-                    LongPollingClient client = iter.next();
-                    iter.remove();
-                    client.sendResponse(Collections.singletonList(groupKey));
-                    LOGGER.info("send response with the changed group,ip={},group={},changeTime={}", client.ip, groupKey, changeTime);
-                }
-            } catch (Throwable e) {
-                LOGGER.error("data change error.", e);
+            for (Iterator<LongPollingClient> iter = clients.iterator(); iter.hasNext();) {
+                LongPollingClient client = iter.next();
+                iter.remove();
+                client.sendResponse(Collections.singletonList(groupKey));
+                LOGGER.info("send response with the changed group,ip={},group={},changeTime={}", client.ip, groupKey, changeTime);
             }
         }
     }

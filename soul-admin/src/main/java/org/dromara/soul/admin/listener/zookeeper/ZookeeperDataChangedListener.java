@@ -17,16 +17,18 @@
 
 package org.dromara.soul.admin.listener.zookeeper;
 
+import java.net.URLEncoder;
+import java.util.List;
+import lombok.SneakyThrows;
 import org.I0Itec.zkclient.ZkClient;
 import org.dromara.soul.admin.listener.DataChangedListener;
 import org.dromara.soul.common.constant.ZkPathConstants;
 import org.dromara.soul.common.dto.AppAuthData;
+import org.dromara.soul.common.dto.MetaData;
 import org.dromara.soul.common.dto.PluginData;
 import org.dromara.soul.common.dto.RuleData;
 import org.dromara.soul.common.dto.SelectorData;
 import org.dromara.soul.common.enums.DataEventTypeEnum;
-
-import java.util.List;
 
 /**
  * Use zookeeper to push data changes.
@@ -59,7 +61,28 @@ public class ZookeeperDataChangedListener implements DataChangedListener {
             if (!zkClient.exists(appAuthPath)) {
                 zkClient.createPersistent(appAuthPath, true);
             }
-            zkClient.writeData(appAuthPath, new AppAuthData(data.getAppKey(), data.getAppSecret(), data.getEnabled()));
+            zkClient.writeData(appAuthPath, data);
+        }
+    }
+
+    @SneakyThrows
+    @Override
+    public void onMetaDataChanged(final List<MetaData> changed, final DataEventTypeEnum eventType) {
+        for (MetaData data : changed) {
+            // delete
+            if (eventType == DataEventTypeEnum.DELETE) {
+                String path = ZkPathConstants.buildMetaDataPath(URLEncoder.encode(data.getPath(), "UTF-8"));
+                if (zkClient.exists(path)) {
+                    zkClient.delete(path);
+                }
+                continue;
+            }
+            // create or update
+            String metaDataPath = ZkPathConstants.buildMetaDataPath(URLEncoder.encode(data.getPath(), "UTF-8"));
+            if (!zkClient.exists(metaDataPath)) {
+                zkClient.createPersistent(metaDataPath, true);
+            }
+            zkClient.writeData(metaDataPath, data);
         }
     }
 
@@ -94,28 +117,29 @@ public class ZookeeperDataChangedListener implements DataChangedListener {
 
     @Override
     public void onSelectorChanged(final List<SelectorData> changed, final DataEventTypeEnum eventType) {
+        if (eventType == DataEventTypeEnum.REFRESH) {
+            String selectorParentPath = ZkPathConstants.buildSelectorParentPath(changed.get(0).getPluginName());
+            if (zkClient.exists(selectorParentPath)) {
+                zkClient.deleteRecursive(selectorParentPath);
+            }
+        }
         for (SelectorData data : changed) {
             if (eventType == DataEventTypeEnum.DELETE) {
-                String selectorRealPath = ZkPathConstants.buildSelectorRealPath(data.getPluginName(), data.getId());
-                if (zkClient.exists(selectorRealPath)) {
-                    zkClient.delete(selectorRealPath);
-                }
+                deleteSelector(data);
                 continue;
             }
-            String selectorParentPath = ZkPathConstants.buildSelectorParentPath(data.getPluginName());
-            if (!zkClient.exists(selectorParentPath)) {
-                zkClient.createPersistent(selectorParentPath, true);
-            }
-            String selectorRealPath = ZkPathConstants.buildSelectorRealPath(data.getPluginName(), data.getId());
-            if (!zkClient.exists(selectorRealPath)) {
-                zkClient.createPersistent(selectorRealPath, true);
-            }
-            zkClient.writeData(selectorRealPath, data);
+            createSelector(data);
         }
     }
-
+    
     @Override
     public void onRuleChanged(final List<RuleData> changed, final DataEventTypeEnum eventType) {
+        if (eventType == DataEventTypeEnum.REFRESH) {
+            String selectorParentPath = ZkPathConstants.buildRuleParentPath(changed.get(0).getPluginName());
+            if (zkClient.exists(selectorParentPath)) {
+                zkClient.deleteRecursive(selectorParentPath);
+            }
+        }
         for (RuleData data : changed) {
             if (eventType == DataEventTypeEnum.DELETE) {
                 final String rulePath = ZkPathConstants.buildRulePath(data.getPluginName(), data.getSelectorId(), data.getId());
@@ -135,5 +159,24 @@ public class ZookeeperDataChangedListener implements DataChangedListener {
             zkClient.writeData(ruleRealPath, data);
         }
     }
-
+    
+    private void deleteSelector(final SelectorData data) {
+        String selectorRealPath = ZkPathConstants.buildSelectorRealPath(data.getPluginName(), data.getId());
+        if (zkClient.exists(selectorRealPath)) {
+            zkClient.delete(selectorRealPath);
+        }
+    }
+    
+    private void createSelector(final SelectorData data) {
+        String selectorParentPath = ZkPathConstants.buildSelectorParentPath(data.getPluginName());
+        if (!zkClient.exists(selectorParentPath)) {
+            zkClient.createPersistent(selectorParentPath, true);
+        }
+        String selectorRealPath = ZkPathConstants.buildSelectorRealPath(data.getPluginName(), data.getId());
+        if (!zkClient.exists(selectorRealPath)) {
+            zkClient.createPersistent(selectorRealPath, true);
+        }
+        zkClient.writeData(selectorRealPath, data);
+    }
+    
 }

@@ -62,25 +62,31 @@ public enum PluginEnum {
      */
     REDIRECT(40, 0, "redirect"),
 
+
+    /**
+     * Hystrix plugin enum.
+     */
+    HYSTRIX(45, 0, "hystrix"),
+
     /**
      * Divide plugin enum.
      */
     DIVIDE(50, 0, "divide"),
 
     /**
+     * springCloud plugin enum.
+     */
+    SPRING_CLOUD(50, 0, "springCloud"),
+
+    /**
      * webSocket plugin enum.
      */
-    WEB_SOCKET(51, 0, "webSocket"),
+    WEB_SOCKET(55, 0, "webSocket"),
 
     /**
      * Dubbo plugin enum.
      */
     DUBBO(60, 0, "dubbo"),
-
-    /**
-     * springCloud plugin enum.
-     */
-    SPRING_CLOUD(70, 0, "springCloud"),
 
     /**
      * Monitor plugin enum.

@@ -18,7 +18,7 @@
 
 package org.dromara.soul.test.springcloud.controller;
 
-
+import org.dromara.soul.client.springcloud.annotation.SoulSpringCloudClient;
 import org.dromara.soul.test.springcloud.dto.UserDTO;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,19 +34,33 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/test")
+@SoulSpringCloudClient(path = "/test/**")
 public class TestController {
-
-
-    @PostMapping("/payment")
-    public String post(@RequestBody final UserDTO userDTO) {
-        return userDTO.getUserId();
+    
+    
+    /**
+     * Post string.
+     *
+     * @param userDTO the user dto
+     * @return the string
+     */
+    @PostMapping("/save")
+    public UserDTO post(@RequestBody final UserDTO userDTO) {
+        userDTO.setUserName("hello world spring cloud save user");
+        return userDTO;
     }
-
-
+    
+    /**
+     * Find by user id user dto.
+     *
+     * @param userId the user id
+     * @return the user dto
+     */
     @GetMapping("/findByUserId")
-    public String findByUserId() {
-        return "helloWorld!";
+    public UserDTO findByUserId(@RequestParam("userId") final String userId) {
+        UserDTO userDTO = new UserDTO();
+        userDTO.setUserId(userId);
+        userDTO.setUserName("hello world spring cloud findBy user");
+        return userDTO;
     }
-
-
 }

@@ -25,7 +25,7 @@ import org.dromara.soul.admin.query.RuleQuery;
 import java.util.List;
 
 /**
- * RuleMapper.
+ * Rule mapper.
  *
  * @author jiangxiaofeng(Nicholas)
  */
@@ -55,6 +55,14 @@ public interface RuleMapper {
      * @return the list
      */
     List<RuleDO> findBySelectorId(String selectorId);
+
+    /**
+     * select rule by name.
+     *
+     * @param name the name
+     * @return rule do
+     */
+    RuleDO findByName(String name);
 
     /**
      * count rule by query.
@@ -105,7 +113,7 @@ public interface RuleMapper {
     int delete(String id);
 
     /**
-     * list all {@linkplain RuleDO}
+     * list all.
      *
      * @return {@linkplain List}
      */

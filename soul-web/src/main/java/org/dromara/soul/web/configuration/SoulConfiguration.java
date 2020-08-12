@@ -18,43 +18,37 @@
 
 package org.dromara.soul.web.configuration;
 
-import org.dromara.soul.web.cache.LocalCacheManager;
-import org.dromara.soul.web.cache.UpstreamCacheManager;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.dromara.soul.plugin.api.RemoteAddressResolver;
+import org.dromara.soul.plugin.api.SoulPlugin;
+import org.dromara.soul.plugin.api.dubbo.DubboParamResolveService;
+import org.dromara.soul.plugin.base.cache.CommonPluginDataSubscriber;
+import org.dromara.soul.plugin.base.handler.PluginDataHandler;
+import org.dromara.soul.sync.data.api.PluginDataSubscriber;
 import org.dromara.soul.web.config.SoulConfig;
-import org.dromara.soul.web.disruptor.publisher.SoulEventPublisher;
-import org.dromara.soul.web.filter.BodyWebFilter;
-import org.dromara.soul.web.filter.ParamWebFilter;
+import org.dromara.soul.web.dubbo.DefaultDubboParamResolveService;
+import org.dromara.soul.web.dubbo.DubboMultiParameterResolveServiceImpl;
+import org.dromara.soul.web.filter.CrossFilter;
+import org.dromara.soul.web.filter.FileSizeFilter;
 import org.dromara.soul.web.filter.TimeWebFilter;
-import org.dromara.soul.web.filter.WebSocketWebFilter;
+import org.dromara.soul.web.filter.WebSocketParamFilter;
+import org.dromara.soul.web.forwarde.ForwardedRemoteAddressResolver;
 import org.dromara.soul.web.handler.SoulWebHandler;
-import org.dromara.soul.web.influxdb.service.InfluxDbService;
-import org.dromara.soul.web.plugin.SoulPlugin;
-import org.dromara.soul.web.plugin.after.MonitorPlugin;
-import org.dromara.soul.web.plugin.after.ResponsePlugin;
-import org.dromara.soul.web.plugin.before.GlobalPlugin;
-import org.dromara.soul.web.plugin.before.SignPlugin;
-import org.dromara.soul.web.plugin.before.WafPlugin;
-import org.dromara.soul.web.plugin.function.DividePlugin;
-import org.dromara.soul.web.plugin.function.RateLimiterPlugin;
-import org.dromara.soul.web.plugin.function.RewritePlugin;
-import org.dromara.soul.web.plugin.function.WebSocketPlugin;
-import org.dromara.soul.web.plugin.ratelimter.RedisRateLimiter;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.SearchStrategy;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.annotation.Order;
-import org.springframework.web.reactive.socket.client.ReactorNettyWebSocketClient;
-import org.springframework.web.reactive.socket.client.WebSocketClient;
-import org.springframework.web.reactive.socket.server.WebSocketService;
-import org.springframework.web.reactive.socket.server.support.HandshakeWebSocketService;
 import org.springframework.web.server.WebFilter;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * SoulConfiguration.
@@ -63,155 +57,10 @@ import java.util.stream.Collectors;
  */
 @Configuration
 @ComponentScan("org.dromara.soul")
-@Import(value = {DubboConfiguration.class, LocalCacheConfiguration.class, ErrorHandlerConfiguration.class})
+@Import(value = {ErrorHandlerConfiguration.class, SoulExtConfiguration.class, SpringExtConfiguration.class})
+@Slf4j
 public class SoulConfiguration {
-
-    private final LocalCacheManager localCacheManager;
-
-    private final UpstreamCacheManager upstreamCacheManager;
-
-    /**
-     * Instantiates a new Soul configuration.
-     *
-     * @param localCacheManager    the local cache manager
-     * @param upstreamCacheManager the upstream cache manager
-     */
-    @Autowired(required = false)
-    public SoulConfiguration(final LocalCacheManager localCacheManager,
-                             final UpstreamCacheManager upstreamCacheManager) {
-        this.localCacheManager = localCacheManager;
-        this.upstreamCacheManager = upstreamCacheManager;
-    }
-
-    /**
-     * init global plugin.
-     *
-     * @return {@linkplain GlobalPlugin}
-     */
-    @Bean
-    public SoulPlugin globalPlugin() {
-        return new GlobalPlugin();
-    }
-
-
-    /**
-     * init sign plugin.
-     *
-     * @return {@linkplain SignPlugin}
-     */
-    @Bean
-    public SoulPlugin signPlugin() {
-        return new SignPlugin(localCacheManager);
-    }
-
-    /**
-     * init waf plugin.
-     *
-     * @return {@linkplain WafPlugin}
-     */
-    @Bean
-    public SoulPlugin wafPlugin() {
-        return new WafPlugin(localCacheManager);
-    }
-
-
-    /**
-     * init rateLimiterPlugin.
-     *
-     * @return {@linkplain RateLimiterPlugin}
-     */
-    @Bean
-    public SoulPlugin rateLimiterPlugin() {
-        return new RateLimiterPlugin(localCacheManager, redisRateLimiter());
-    }
-
-
-    /**
-     * Redis rate limiter redis rate limiter.
-     *
-     * @return the redis rate limiter
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public RedisRateLimiter redisRateLimiter() {
-        return new RedisRateLimiter();
-    }
-
-    /**
-     * init rewritePlugin.
-     *
-     * @return {@linkplain RewritePlugin}
-     */
-    @Bean
-    public SoulPlugin rewritePlugin() {
-        return new RewritePlugin(localCacheManager);
-    }
-
-    /**
-     * init dividePlugin.
-     *
-     * @return {@linkplain DividePlugin}
-     */
-    @Bean
-    public SoulPlugin dividePlugin() {
-        return new DividePlugin(localCacheManager, upstreamCacheManager);
-    }
-
-    /**
-     * Web socket plugin web socket plugin.
-     *
-     * @param webSocketClient  the web socket client
-     * @param webSocketService the web socket service
-     * @return the web socket plugin
-     */
-    @Bean
-    public WebSocketPlugin webSocketPlugin(final WebSocketClient webSocketClient,
-                                           final WebSocketService webSocketService) {
-        return new WebSocketPlugin(localCacheManager, upstreamCacheManager, webSocketClient, webSocketService);
-    }
-
-    /**
-     * Influx db service influx db service.
-     *
-     * @return the influx db service
-     */
-    @Bean
-    public InfluxDbService influxDbService() {
-        return new InfluxDbService();
-    }
-
-    /**
-     * Soul event publisher soul event publisher.
-     *
-     * @param influxDbService the influx db service
-     * @return the soul event publisher
-     */
-    @Bean
-    public SoulEventPublisher soulEventPublisher(InfluxDbService influxDbService) {
-        return new SoulEventPublisher(influxDbService);
-    }
-
-    /**
-     * Monitor plugin soul plugin.
-     *
-     * @param soulEventPublisher the soul event publisher
-     * @return the soul plugin
-     */
-    @Bean
-    public SoulPlugin monitorPlugin(SoulEventPublisher soulEventPublisher) {
-        return new MonitorPlugin(soulEventPublisher, localCacheManager);
-    }
-
-    /**
-     * init responsePlugin.
-     *
-     * @return {@linkplain ResponsePlugin}
-     */
-    @Bean
-    public SoulPlugin responsePlugin() {
-        return new ResponsePlugin();
-    }
-
+    
     /**
      * init SoulWebHandler.
      *
@@ -219,41 +68,96 @@ public class SoulConfiguration {
      * @return {@linkplain SoulWebHandler}
      */
     @Bean("webHandler")
-    public SoulWebHandler soulWebHandler(final List<SoulPlugin> plugins) {
-        final List<SoulPlugin> soulPlugins = plugins.stream()
-                .sorted((m, n) -> {
-                    if (m.pluginType().equals(n.pluginType())) {
-                        return m.getOrder() - n.getOrder();
-                    } else {
-                        return m.pluginType().getName().compareTo(n.pluginType().getName());
-                    }
-                }).collect(Collectors.toList());
+    public SoulWebHandler soulWebHandler(final ObjectProvider<List<SoulPlugin>> plugins) {
+        List<SoulPlugin> pluginList = plugins.getIfAvailable(Collections::emptyList);
+        final List<SoulPlugin> soulPlugins = pluginList.stream()
+                .sorted(Comparator.comparingInt(SoulPlugin::getOrder)).collect(Collectors.toList());
+        soulPlugins.forEach(soulPlugin -> log.info("loader plugin:[{}] [{}]", soulPlugin.named(), soulPlugin.getClass().getName()));
         return new SoulWebHandler(soulPlugins);
     }
-
+    
+    /**
+     * Plugin data subscriber plugin data subscriber.
+     *
+     * @param pluginDataHandlerList the plugin data handler list
+     * @return the plugin data subscriber
+     */
+    @Bean
+    public PluginDataSubscriber pluginDataSubscriber(final ObjectProvider<List<PluginDataHandler>> pluginDataHandlerList) {
+        return new CommonPluginDataSubscriber(pluginDataHandlerList.getIfAvailable(Collections::emptyList));
+    }
+    
+    /**
+     * Generic param resolve service generic param resolve service.
+     *
+     * @return the generic param resolve service
+     */
+    @Bean
+    @ConditionalOnProperty(name = "soul.dubbo.parameter", havingValue = "multi")
+    public DubboParamResolveService dubboMultiParameterResolveServiceImpl() {
+        return new DubboMultiParameterResolveServiceImpl();
+    }
+    
+    /**
+     * Generic param resolve service dubbo param resolve service.
+     *
+     * @return the dubbo param resolve service
+     */
+    @Bean
+    @ConditionalOnMissingBean(value = DubboParamResolveService.class, search = SearchStrategy.ALL)
+    public DubboParamResolveService defaultDubboParamResolveService() {
+        return new DefaultDubboParamResolveService();
+    }
+    
+    /**
+     * Remote address resolver remote address resolver.
+     *
+     * @return the remote address resolver
+     */
+    @Bean
+    @ConditionalOnMissingBean(RemoteAddressResolver.class)
+    public RemoteAddressResolver remoteAddressResolver() {
+        return new ForwardedRemoteAddressResolver(1);
+    }
+    
+    /**
+     * Cross filter web filter.
+     * if you application has cross-domain.
+     * this is demo.
+     * 1. Customize webflux's cross-domain requests.
+     * 2. Spring bean Sort is greater than -1.
+     *
+     * @return the web filter
+     */
+    @Bean
+    @Order(-100)
+    public WebFilter crossFilter() {
+        return new CrossFilter();
+    }
+    
     /**
      * Body web filter web filter.
      *
      * @return the web filter
      */
     @Bean
-    @Order(-1)
-    public WebFilter bodyWebFilter() {
-        return new BodyWebFilter();
+    @Order(-10)
+    public WebFilter fileSizeFilter() {
+        return new FileSizeFilter();
     }
-
-
+    
+    
     /**
-     * Param web filter web filter.
+     * Soul config soul config.
      *
-     * @return the web filter
+     * @return the soul config
      */
     @Bean
-    @Order(1)
-    public WebFilter paramWebFilter() {
-        return new ParamWebFilter();
+    @ConfigurationProperties(prefix = "soul")
+    public SoulConfig soulConfig() {
+        return new SoulConfig();
     }
-
+    
     /**
      * init time web filter.
      *
@@ -261,43 +165,20 @@ public class SoulConfiguration {
      * @return {@linkplain TimeWebFilter}
      */
     @Bean
-    @Order(2)
-    @ConditionalOnProperty(name = "soul.filterTimeEnable", matchIfMissing = true)
+    @Order(30)
+    @ConditionalOnProperty(name = "soul.filterTimeEnable")
     public WebFilter timeWebFilter(final SoulConfig soulConfig) {
         return new TimeWebFilter(soulConfig);
     }
-
-
+    
     /**
      * Web socket web filter web filter.
      *
      * @return the web filter
      */
     @Bean
-    @Order(2)
+    @Order(4)
     public WebFilter webSocketWebFilter() {
-        return new WebSocketWebFilter();
+        return new WebSocketParamFilter();
     }
-
-
-    /**
-     * Reactor netty web socket client reactor netty web socket client.
-     *
-     * @return the reactor netty web socket client
-     */
-    @Bean
-    public ReactorNettyWebSocketClient reactorNettyWebSocketClient() {
-        return new ReactorNettyWebSocketClient();
-    }
-
-    /**
-     * Web socket service web socket service.
-     *
-     * @return the web socket service
-     */
-    @Bean
-    public WebSocketService webSocketService() {
-        return new HandshakeWebSocketService();
-    }
-
 }

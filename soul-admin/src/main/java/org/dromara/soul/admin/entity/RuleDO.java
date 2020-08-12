@@ -70,7 +70,7 @@ public class RuleDO extends BaseDO {
      * process logic.
      */
     private String handle;
-
+    
     /**
      * build ruleDO.
      *
@@ -82,7 +82,7 @@ public class RuleDO extends BaseDO {
             RuleDO ruleDO = new RuleDO();
             Timestamp currentTime = new Timestamp(System.currentTimeMillis());
             if (StringUtils.isEmpty(ruleDTO.getId())) {
-                ruleDO.setId(UUIDUtils.generateShortUuid());
+                ruleDO.setId(UUIDUtils.getInstance().generateShortUuid());
                 ruleDO.setDateCreated(currentTime);
             } else {
                 ruleDO.setId(ruleDTO.getId());
@@ -100,7 +100,15 @@ public class RuleDO extends BaseDO {
         }
         return null;
     }
-
+    
+    /**
+     * Trans from rule data.
+     *
+     * @param ruleDO            the rule do
+     * @param pluginName        the plugin name
+     * @param conditionDataList the condition data list
+     * @return the rule data
+     */
     public static RuleData transFrom(final RuleDO ruleDO, final String pluginName, final List<ConditionData> conditionDataList) {
         return new RuleData(ruleDO.getId(),
                 ruleDO.getName(),

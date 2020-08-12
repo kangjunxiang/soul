@@ -18,8 +18,9 @@
 
 package org.dromara.soul.web.handler;
 
-import com.google.common.collect.Maps;
-import org.dromara.soul.common.exception.CommonErrorCode;
+import java.util.Map;
+import org.dromara.soul.common.utils.GsonUtils;
+import org.dromara.soul.plugin.base.utils.SoulResultWarp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.web.ErrorProperties;
@@ -34,17 +35,15 @@ import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
-import java.util.Map;
-
 /**
  * GlobalErrorHandler.
  *
  * @author xiaoyu(Myth)
  */
 public class GlobalErrorHandler extends DefaultErrorWebExceptionHandler {
-
+    
     private static final Logger LOGGER = LoggerFactory.getLogger(GlobalErrorHandler.class);
-
+    
     /**
      * Instantiates a new Global error handler.
      *
@@ -59,45 +58,39 @@ public class GlobalErrorHandler extends DefaultErrorWebExceptionHandler {
                               final ApplicationContext applicationContext) {
         super(errorAttributes, resourceProperties, errorProperties, applicationContext);
     }
-
+    
     @Override
     protected Map<String, Object> getErrorAttributes(final ServerRequest request, final boolean includeStackTrace) {
         logError(request);
-        return response(HttpStatus.INTERNAL_SERVER_ERROR.value());
+        return response(request);
     }
-
+    
     @Override
     protected RouterFunction<ServerResponse> getRoutingFunction(final ErrorAttributes errorAttributes) {
         return RouterFunctions.route(RequestPredicates.all(), this::renderErrorResponse);
     }
-
+    
     @Override
-    protected HttpStatus getHttpStatus(final Map<String, Object> errorAttributes) {
-        int statusCode = (int) errorAttributes.get("code");
-        return HttpStatus.valueOf(statusCode);
+    protected int getHttpStatus(final Map<String, Object> errorAttributes) {
+        return HttpStatus.INTERNAL_SERVER_ERROR.value();
     }
-
-    private static Map<String, Object> response(final int status) {
-        Map<String, Object> map = Maps.newHashMapWithExpectedSize(3);
-        map.put("code", status);
-        map.put("message", CommonErrorCode.ERROR_MSG);
-        map.put("data", null);
-        return map;
+    
+    private Map<String, Object> response(final ServerRequest request) {
+        Throwable ex = getError(request);
+        Object error = SoulResultWarp.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), ex.getMessage());
+        return GsonUtils.getInstance().toObjectMap(GsonUtils.getInstance().toJson(error));
     }
-
+    
     private void logError(final ServerRequest request) {
         Throwable ex = getError(request);
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug(request.exchange().getLogPrefix() + formatError(ex, request));
-        }
+        LOGGER.error(request.exchange().getLogPrefix() + formatError(ex, request));
     }
-
+    
     private String formatError(final Throwable ex, final ServerRequest request) {
         String reason = ex.getClass().getSimpleName() + ": " + ex.getMessage();
-        return "Resolved [" + reason + "] for HTTP " + request.methodName() + " "
-                + request.path();
+        return "Resolved [" + reason + "] for HTTP " + request.methodName() + " " + request.path();
     }
-
+    
 }
 
 
